@@ -1,4 +1,7 @@
+books
 __pycache__
-*.bak
-doc_ids.json
 .tolinoclientrc
+allids.txt
+download.log
+inventory.txt
+.idea

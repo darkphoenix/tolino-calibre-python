@@ -79,14 +79,26 @@ def upload(args):
     print('uploaded {} to tolino cloud as {}.'.format(args.filename, document_id))
 
 def download(args):
+    from tqdm import tqdm
     global confpath
     c = TolinoCloud(args.partner, args.use_device, confpath)
     c.login(args.user, args.password)
     c.register()
-    fn = c.download(None, args.document_id)
+    docs = []
+    errors = []
+    for doc_id in tqdm(args.document_id.split(',')):
+      try:
+        fn = c.download(None, doc_id)
+        docs.append(f"{doc_id} => {fn}")
+      except Exception as e:
+        errors.append(f"{doc_id} => {e}")
     c.unregister()
     c.logout()
-    print('downloaded {} from tolino cloud to {}.'.format(args.document_id, fn))
+    docs = '\n'.join(docs)
+    print(f'downloaded : \n{docs}')
+    if errors:
+        errors = '\n'.join(errors)
+        print(f'errors : {errors}')
 
 def delete(args):
     global confpath
