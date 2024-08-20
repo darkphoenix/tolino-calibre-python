@@ -34,7 +34,7 @@ hopefully improve in the future.  A full Calibre installation is required, as we
 Python installation with the requests module installed.  On Windows, installing
 Python 3.9 from the Windows Store is probably the easiest option.  requests can be installed using the following command:
 ```
-pip install requests
+pip install -r requirements.txt
 ```
 Afterwards, download or git clone this repository to a location of your choice.  Rename tolinoclientrc to .tolinoclientrc, then adjust the values in it using any text editor - user and password are your credentials with your tolino reseller, partner is your reseller's ID (see further down this document for a list of IDs). Set dbpath to the full path to your Calibre Library, and libpath to the Python installation you set up earlier - on Windows, this is probably C:\Users\YOURNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages (substitute your username), on Linux it is likely /usr/lib/python3/dist-packages, but may vary depending on the distribution.  Now open a terminal in the directory you unpacked tolino-calibre-sync (on Windows, Shift+right click, then select "Open PowerShell Window here") and type
 ```

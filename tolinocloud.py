@@ -249,6 +249,34 @@ class TolinoCloud:
             'sync_data_url'    : 'https://bosh.pageplace.de/bosh/rest/sync-data?paths=publications,audiobooks',
             'downloadinfo_url' : 'https://bosh.pageplace.de/bosh/rest//cloud/downloadinfo/{}/{}/type/external-download'
         },
+        12: {
+            # weltbild.ch
+            'client_id'        : 'webreader',
+            'scope'            : 'ebook_library',
+            'token_url'        : 'https://api.weltbild.ch/rest/oauth2/token',
+            'auth_url'         : 'https://www.weltbild.ch/oauth2/authorize',
+            'login_url'        : 'https://www.weltbild.ch/konto/login',
+            'logout_url'       : 'https://www.weltbild.ch/konto/abmelden',
+            'login_cookie'     : 'sid',
+            'login_form': {
+                'username'  : 'unilogin[emailAddress]',
+                'password'  : 'unilogin[password]',
+                'extra': { 
+                   'unilogin[type]': 0,
+                }
+            },
+            'reader_url'       : 'https://webreader.mytolino.com/library/index.html#/mybooks/titles',
+            'register_url'     : 'https://bosh.pageplace.de/bosh/rest/v2/registerhw',
+            'devices_url'      : 'https://bosh.pageplace.de/bosh/rest/handshake/devices/list',
+            'unregister_url'   : 'https://bosh.pageplace.de/bosh/rest/handshake/devices/delete',
+            'upload_url'       : 'https://bosh.pageplace.de/bosh/rest/upload',
+            'delete_url'       : 'https://bosh.pageplace.de/bosh/rest/deletecontent',
+            'inventory_url'    : 'https://bosh.pageplace.de/bosh/rest/inventory/delta',
+            'meta_url'         : 'https://bosh.pageplace.de/bosh/rest/meta',
+            'cover_url'        : 'https://bosh.pageplace.de/bosh/rest/cover',
+            'sync_data_url'    : 'https://bosh.pageplace.de/bosh/rest/sync-data?paths=publications,audiobooks',
+            'downloadinfo_url' : 'https://bosh.pageplace.de/bosh/rest//cloud/downloadinfo/{}/{}/type/external-download'
+        },
         13: {
             # Hugendubel.de
             'client_id'        : '4c20de744aa8b83b79b692524c7ec6ae',
@@ -351,6 +379,7 @@ class TolinoCloud:
         self.session = requests.session()
         self.use_device = use_device
         self.confpath = confpath
+        self.client_id = ""
 
     def _debug(self, r):
         if logging.getLogger().getEffectiveLevel() >= logging.DEBUG:
@@ -369,6 +398,10 @@ class TolinoCloud:
         s = self.session
         c = self.partner_settings[self.partner_id]
 
+        config = ConfigParser()
+        config.read(self.confpath)
+        self.client_id = config.get('Defaults', 'client_id') or c['client_id']
+
         if self.use_device:
             TolinoCloud.hardware_id = username
             if self.partner_id == 80:
@@ -376,7 +409,7 @@ class TolinoCloud:
                 return
 
             r = s.post(c['token_url'], data = {
-                'client_id'    : c['client_id'],
+                'client_id'    : self.client_id,
                 'grant_type'   : 'refresh_token',
                 'refresh_token': password,
                 'scope'        : c['scope'],
@@ -388,8 +421,6 @@ class TolinoCloud:
                 self.refresh_token = j['refresh_token']
                 self.token_expires = int(j['expires_in'])
                 #Store new refresh token
-                config = ConfigParser()
-                config.read(self.confpath)
                 config.set('Defaults', 'password', self.refresh_token)
                 with open(self.confpath, 'w') as f:
                     config.write(f)
@@ -401,7 +432,7 @@ class TolinoCloud:
         # to retrieve site's cookies within browser session
         if 'login_form_url' in c:
             r = s.get(c['login_form_url'], params = {
-                'client_id'     : c['client_id'],
+                'client_id'     : self.client_id,
                 'response_type' : 'code',
                 'scope'         : c['scope'],
                 'redirect_uri'  : c['reader_url'],
@@ -430,7 +461,7 @@ class TolinoCloud:
         else:
             # Request OAUTH code
             params = {
-                'client_id'     : c['client_id'],
+                'client_id'     : self.client_id,
                 'response_type' : 'code',
                 'scope'         : c['scope'],
                 'redirect_uri'  : c['reader_url']
@@ -441,14 +472,17 @@ class TolinoCloud:
             r = s.get(c['auth_url'], params=params, verify=True, allow_redirects=False)
             self._debug(r)
             try:
-                params = parse_qs(urlparse(r.headers['Location']).query)
+                url = r.headers['Location']
+                if '#' in url:
+                 url = url.split('#', 1)[-1] # weltbild sends back /index.html#/real/page?code=
+                params = parse_qs(urlparse(url).query)
                 auth_code = params['code'][0]
             except:
                 raise TolinoException('oauth code request failed.')
 
             # Fetch OAUTH access token
             r = s.post(c['token_url'], data = {
-                'client_id'    : c['client_id'],
+                'client_id'    : self.client_id,
                 'grant_type'   : 'authorization_code',
                 'code'         : auth_code,
                 'scope'        : c['scope'],
@@ -472,7 +506,7 @@ class TolinoCloud:
         if 'revoke_url' in c:
             r = s.post(c['revoke_url'],
                 data = {
-                    'client_id'  : c['client_id'],
+                    'client_id'  : self.client_id,
                     'token_type' : 'refresh_token',
                     'token'      : self.refresh_token
                 }
